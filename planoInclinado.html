@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulação Plano Inclinado com Roldana</title>
+  <style>
+    body {
+      background-color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      border: 1px solid black;
+      background-color: white;
+      margin-top: 10px;
+    }
+
+    .controles {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .controles label {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Simulação: Plano Inclinado com Roldana</h2>
+
+  <!-- Controles para interação -->
+  <div class="controles">
+    <label>Ângulo de inclinação: 
+      <input type="range" id="anguloRange" min="10" max="60" value="30"> 
+      <span id="anguloValor">30</span>°
+    </label>
+    <label>Massa do bloco A (kg): 
+      <input type="number" id="massaA" min="1" max="20" value="5">
+    </label>
+    <label>Massa do bloco B (kg): 
+      <input type="number" id="massaB" min="1" max="20" value="3">
+    </label>
+    <label>Coeficiente de atrito (μ): 
+      <input type="number" id="atrito" min="0" max="1" step="0.05" value="0.1">
+    </label>
+  </div>
+
+  <!-- Área do desenho -->
+  <canvas id="simulacao" width="800" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById("simulacao");
+    const ctx = canvas.getContext("2d");
+
+    // Parâmetros físicos
+    let angulo = 30 * Math.PI / 180; // ângulo inicial em rad
+    let massaA = 5; // kg
+    let massaB = 3; // kg
+    let mu = 0.1;   // coeficiente de atrito
+    const g = 9.8;  // gravidade
+
+    // Dimensões do plano
+    const base = 400;
+    const alturaMax = 250;
+    const origemX = 100;
+    const origemY = 400;
+
+    // Função para desenhar o plano inclinado
+    function desenharPlano() {
+      const altura = Math.tan(angulo) * base;
+      ctx.fillStyle = "#cc6600";
+      ctx.beginPath();
+      ctx.moveTo(origemX, origemY);
+      ctx.lineTo(origemX + base, origemY);
+      ctx.lineTo(origemX + base, origemY - altura);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Função para desenhar um bloco
+    function desenharBloco(x, y, largura, altura, cor) {
+      ctx.fillStyle = cor;
+      ctx.fillRect(x, y, largura, altura);
+    }
+
+    // Função para desenhar bloco A rotacionado no plano
+function desenharBlocoInclinado(bloco, cor, angulo) {
+  ctx.save(); // salva estado atual
+  ctx.translate(bloco.x + bloco.largura / 2, bloco.y + bloco.altura / 2); // move para o centro do bloco
+  ctx.rotate(-angulo); // rotaciona pelo ângulo do plano
+  ctx.fillStyle = cor;
+  ctx.fillRect(-bloco.largura / 2, -bloco.altura / 2, bloco.largura, bloco.altura); // desenha centrado
+  ctx.restore(); // restaura contexto
+}
+
+
+    // Função para desenhar vetores
+    function desenharVetor(x, y, dx, dy, cor, nome) {
+      ctx.strokeStyle = cor;
+      ctx.fillStyle = cor;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + dx, y + dy);
+      ctx.stroke();
+
+      // Cabeça da seta
+      const ang = Math.atan2(dy, dx);
+      ctx.beginPath();
+      ctx.moveTo(x + dx, y + dy);
+      ctx.lineTo(x + dx - 10 * Math.cos(ang - Math.PI / 6), y + dy - 10 * Math.sin(ang - Math.PI / 6));
+      ctx.lineTo(x + dx - 10 * Math.cos(ang + Math.PI / 6), y + dy - 10 * Math.sin(ang + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+
+      // Nome do vetor
+      ctx.font = "14px Arial";
+      ctx.fillText(nome, x + dx + 5, y + dy + 5);
+    }
+
+    // Função principal de desenho
+    function desenhar() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Calcula altura do plano de acordo com o ângulo
+      const altura = Math.tan(angulo) * base;
+
+// Posição dos blocos
+const blocoA = {
+  largura: 40,
+  altura: 40,
+  x: origemX + base / 2 - 60,
+  y: origemY - (altura / 2) - 20
+};
+
+// Ajuste: bloco B agora fica mais embaixo da roldana
+const blocoB = {
+  largura: 40,
+  altura: 40,
+  x: origemX + base + 5,
+  y: origemY - altura + 100 // deslocado 100px para baixo
+};
+
+
+      // Forças sobre bloco A
+      const pesoA = massaA * g;
+      const Pax = pesoA * Math.sin(angulo);
+      const Pay = pesoA * Math.cos(angulo);
+      const fat = mu * Pay;
+
+      // Forças sobre bloco B
+      const pesoB = massaB * g;
+
+      //Desenhar
+      desenharPlano();
+      desenharBlocoInclinado(blocoA, "#66cccc", angulo);
+      desenharBloco(blocoB.x, blocoB.y, blocoB.largura, blocoB.altura, "#66cccc");
+
+      // Corda
+      ctx.strokeStyle = "black";
+      ctx.beginPath();
+      ctx.moveTo(blocoA.x + blocoA.largura, blocoA.y + blocoA.altura / 2);
+      ctx.lineTo(origemX + base +20, origemY - altura - 30);
+      ctx.lineTo(blocoB.x + blocoB.largura / 2, blocoB.y);
+      ctx.stroke();
+
+      // Vetores do bloco A
+      desenharVetor(blocoA.x + 20, blocoA.y + 20, 50 * Math.cos(-angulo), 50 * Math.sin(-angulo), "red", "T");
+      desenharVetor(blocoA.x + 20, blocoA.y + 20, -40 * Math.cos(angulo), 40 * Math.sin(angulo), "blue", "Pax");
+      desenharVetor(blocoA.x + 20, blocoA.y + 20, 50 * Math.cos(angulo), +200 * Math.sin(angulo), "blue", "Pay");
+      desenharVetor(blocoA.x + 20, blocoA.y + 20, 0, 50, "black", "P");
+      desenharVetor(blocoA.x + 20, blocoA.y + 20, -10 * Math.cos(angulo), -30 * Math.sin(angulo), "green", "Fat");
+
+      // Vetores do bloco B
+      desenharVetor(blocoB.x + 20, blocoB.y + 20, 0, -60, "red", "T");
+      desenharVetor(blocoB.x + 20, blocoB.y + 20, 0, 80, "blue", "Pb");
+
+      // Resultado no console (força resultante teórica)
+      const forcaResultante = pesoB - Pax - fat;
+      console.log("Força resultante:", forcaResultante.toFixed(2), "N");
+    }
+
+    // Loop de atualização
+    function loop() {
+      desenhar();
+      requestAnimationFrame(loop);
+    }
+
+    // Eventos dos controles
+    document.getElementById("anguloRange").addEventListener("input", e => {
+      document.getElementById("anguloValor").textContent = e.target.value;
+      angulo = e.target.value * Math.PI / 180;
+    });
+    document.getElementById("massaA").addEventListener("input", e => {
+      massaA = parseFloat(e.target.value);
+    });
+    document.getElementById("massaB").addEventListener("input", e => {
+      massaB = parseFloat(e.target.value);
+    });
+    document.getElementById("atrito").addEventListener("input", e => {
+      mu = parseFloat(e.target.value);
+    });
+
+    // Inicia
+    loop();
+  </script>
+</body>
+</html>
